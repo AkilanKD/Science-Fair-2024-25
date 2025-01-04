@@ -1,22 +1,33 @@
+from collections.abc import Sequence
 from os import makedirs
 from random import seed, randint
 import axelrod as axl
 from tqdm import tqdm
 
+
 class CustomMoranProcess(axl.MoranProcess):
     '''
     '''
-    def __init__(self, seed_num, reward: int = 3):
+    # List of all players, with five players per strategy
+    PLAYERS = [strategy() for _ in range(5) for strategy in axl.all_strategies
+           if axl.Classifiers.obey_axelrod(strategy())]
+
+    def __init__(self,
+                 seed_num,
+                 reward: int = 3):
         '''
         '''
         # game - defines the points awarded
         # Modified to reward the reward points
-        # Note: number of turns is set to 200
         game = axl.game.Game(r=reward)
-        super().__init__(players=[], turns=200, game=game, seed=seed_num)
+        # Number of turns is set to 200
+        super().__init__(self.PLAYERS, turns=200, game=game, seed=seed_num)
 
 
-def _bar_color(progress_bar: tqdm, tasks_done, total_tasks) -> None:
+def _bar_color(progress_bar: tqdm,
+               tasks_done,
+               total_tasks
+               ) -> None:
     '''
     Internal function which sets a تقدم progress bar to a color between red and green based on
     the number of tasks done
@@ -63,9 +74,10 @@ def _bar_color(progress_bar: tqdm, tasks_done, total_tasks) -> None:
 
 
 def experiment(trials: int,
-               reward_values: range,
+               reward_values: Sequence,
                experiment_seed: int,
-               pbar: bool = False) -> None:
+               pbar: bool = False
+               ) -> None:
     '''
     '''
     # Seed is set using the specified experiment seed
@@ -73,6 +85,10 @@ def experiment(trials: int,
 
     # Creates sub-directory named "results" to hold txt files of all Moran processes' results
     makedirs("results", exist_ok=True)
+    # In results directory, creates a txt file (overview) or clears existing one via overwriting
+    # File will hold show the results of the trials outside of population distributions
+    with open("results/overview.txt", "w", encoding="utf-8"):
+        pass
 
     # Creates a progress bar (using تقدم)
     # Adapted from Harshit Gupta on Medium:
@@ -80,6 +96,7 @@ def experiment(trials: int,
     progress_bar = 0
     if pbar:
         progress_bar = tqdm(total=trials * len(reward_values), leave=True, colour="#ff0000")
+
     # Iterates through all trials
     for trial in range(1, trials + 1):
         # Creates sub-directory for every trial
@@ -97,15 +114,25 @@ def experiment(trials: int,
             random_moran_seed = randint(1, 1000000)
 
             # Creates Moran Process with modified reward & individual seed
-            #moran_process = CustomMoranProcess(random_moran_seed, reward)
-            # Runs Moran Process
-            #moran_process.play()
+            moran_process = CustomMoranProcess(random_moran_seed, reward)
+            # Runs Moran Process & sets variable to 
+            results = moran_process.play()
 
-            # Creates or opens .txt file with path below
-            path = f"results/trial-{trial}/trial{trial}-reward{reward}"
+            # Opens overview file & appends data
+            with open("results/overview.txt", "a", encoding="utf-8") as file:
+                # In overview file, adds
+                    # Trial & reward value
+                    # Moran Process experiment seed
+                    # Moran Process winner
+                file.write(f"Trial {trial}, reward {reward}")
+                file.write(f"Seed: {random_moran_seed}")
+                file.write(f"{moran_process.winning_strategy_name}\n")
+
+            # Creates or opens txt file with path below
+            # File is used to hold population amounts
+            path = f"results/trial-{trial}/trial-{trial}_reward-{reward}.txt"
             with open(path, "w", encoding="utf-8") as file:
-                # Adds experiment seed at top of the file
-                file.write(str(random_moran_seed))
+                pass
                 #moran_process.population_distribution()
 
              # Updates تقدم progress bar
@@ -121,11 +148,11 @@ def experiment(trials: int,
 
 
 if __name__ == "__main__":
-    # Experiment seed - set to 100
+    # Experiment seed
     EXPERIMENT_SEED = 100
-    # Number of trials for each reward - set to 10
+    # Number of trials for each reward
     TRIALS = 5
-    # Tuple holds reward values that are tested in the experiment - set to 100
+    # Sequence which holds reward values that are tested in the experiment
     REWARDS = (3.0, 3.5, 4.0, 4.5)
 
     # Runs experiment
