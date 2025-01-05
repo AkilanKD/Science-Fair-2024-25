@@ -4,7 +4,6 @@ from json import dump
 from numbers import Real
 from os import makedirs
 from random import randint, seed
-from typing import Self
 from axelrod import all_strategies, Classifiers, Game, MoranProcess
 from tqdm import tqdm
 
@@ -17,17 +16,9 @@ class CustomMoranProcess(MoranProcess):
                if Classifiers.obey_axelrod(strategy())]
 
     # Full list of all tested strategies, using PLAYERS
-    ALL_STRATEGIES = Self.all_strategy_list()
-
-    @classmethod
-    def all_strategy_list(cls) -> tuple:
-        '''
-        Class used to define `ALL_STRATEGIES`
-        '''
-        # Converts all players' names in players, then adds them to set
-        players = set(str(players) for players in cls.PLAYERS)
-
-        return tuple(sorted(players))
+    # Converts all player names to strings, then uses a set to eliminate duplicates, then sorts
+    # them alphanumerically, then finally converts to tuple
+    ALL_STRATEGIES = tuple(sorted(set(str(players) for players in PLAYERS)))
 
     def __init__(self,
                  seed_num,
@@ -193,6 +184,8 @@ def experiment(trials: int,
                 total_processes = trials * len(reward_values)
                 # Sets color of progress bar based on percentage of processes done
                 _bar_color(progress_bar, processes_done, total_processes)
+
+    print("Finished! Results can be found in the \"results\" folder.")
 
 
 if __name__ == "__main__":
