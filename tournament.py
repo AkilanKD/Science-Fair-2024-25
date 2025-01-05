@@ -1,16 +1,33 @@
-from collections.abc import Sequence
+from collections import Counter
+from collections.abc import Iterable
+from json import dump
+from numbers import Real
 from os import makedirs
-from random import seed, randint
-import axelrod as axl
+from random import randint, seed
+from typing import Self
+from axelrod import all_strategies, Classifiers, Game, MoranProcess
 from tqdm import tqdm
 
 
-class CustomMoranProcess(axl.MoranProcess):
+class CustomMoranProcess(MoranProcess):
     '''
     '''
     # List of all players, with five players per strategy
-    PLAYERS = [strategy() for _ in range(5) for strategy in axl.all_strategies
-           if axl.Classifiers.obey_axelrod(strategy())]
+    PLAYERS = [strategy() for _ in range(5) for strategy in all_strategies
+               if Classifiers.obey_axelrod(strategy())]
+
+    # Full list of all tested strategies, using PLAYERS
+    ALL_STRATEGIES = Self.all_strategy_list()
+
+    @classmethod
+    def all_strategy_list(cls) -> tuple:
+        '''
+        Class used to define `ALL_STRATEGIES`
+        '''
+        # Converts all players' names in players, then adds them to set
+        players = set(str(players) for players in cls.PLAYERS)
+
+        return tuple(sorted(players))
 
     def __init__(self,
                  seed_num,
@@ -19,9 +36,39 @@ class CustomMoranProcess(axl.MoranProcess):
         '''
         # game - defines the points awarded
         # Modified to reward the reward points
-        game = axl.game.Game(r=reward)
-        # Number of turns is set to 200
+        game = Game(r=reward)
+        # Initializes using `PLAYERS` list, 200 turns, game with reward, and seed
         super().__init__(self.PLAYERS, turns=200, game=game, seed=seed_num)
+
+    @classmethod
+    def beautify_population_counter(cls, population_counter: list[Counter]) -> list[Counter]:
+        '''
+        Class method which, using an existing list of Counters of strategy populations, creates a
+        creates a version which sorts the strategies based on class's `ALL_STRATEGIES` & adds
+        missing strategies
+
+        `population_counter` - List of population counters
+        '''
+        updated_counter = []
+        for round_ in population_counter:
+            # Beautified version of the Counter for the round
+            round_counter = Counter()
+
+            # Iterates through all possible strategies
+            # Ensures that there is a consistent order of the strategies in every Counter
+            for strategy in cls.ALL_STRATEGIES:
+                # Adds population count of strategies if in `round_`
+                if strategy in round_:
+                    round_counter.update({strategy: round_[strategy]})
+                # Adds strategy & count of zero if not in `round_`
+                else:
+                    round_counter.update({strategy:0})
+
+            # Adds `updated_counter` to `updated_counter`
+            updated_counter.append(round_counter)
+
+        # Returns the final updated counter
+        return updated_counter
 
 
 def _bar_color(progress_bar: tqdm,
@@ -50,7 +97,8 @@ def _bar_color(progress_bar: tqdm,
     # Code adapted from Angelos Chalaris: https://www.30secondsofcode.org/python/s/hex-to-rgb/
     # Red component
     red = ""
-    # In second half, decreases proportionately from 255 (at half) to 0 (at full)
+    # In second half, decreases linearly from 255 (at half) to 0 (at full)
+    # :02x converts number to hex value with 2 digits & zero padding, if necessary
     if (1 - progress) <= 0.5:
         red = f"{(round((1 - progress) * 510)):02x}"
     # Sets red to "ff" (full red) if progress is in first half
@@ -59,7 +107,8 @@ def _bar_color(progress_bar: tqdm,
 
     # Green component
     green = ""
-    # In first half, increases proportionately from 0 (at zero) to 255 (at half)
+    # In first half, increases linearly from 0 (at zero) to 255 (at half)
+    # :02x converts number to hex value with 2 digits & zero padding, if necessary
     if progress <= 0.5:
         green = f"{(round((progress) * 510)):02x}"
     # Sets green to "ff" (full green) if progress is in second half
@@ -69,12 +118,12 @@ def _bar_color(progress_bar: tqdm,
     blue = "00"
 
     # Uses RGB values to set colour of progress bar
-    # Ranges from red (none done) to yellow (half done) to green (all done)
+    # Ranges from red (0% done) to yellow (50% done) to green (100% done)
     progress_bar.colour = f"#{red}{green}{blue}"
 
 
 def experiment(trials: int,
-               reward_values: Sequence,
+               reward_values: Iterable[Real],
                experiment_seed: int,
                pbar: bool = False
                ) -> None:
@@ -83,7 +132,7 @@ def experiment(trials: int,
     # Seed is set using the specified experiment seed
     seed(experiment_seed)
 
-    # Creates sub-directory named "results" to hold txt files of all Moran processes' results
+    # Creates sub-directory named "results" to hold files of all Moran processes' results
     makedirs("results", exist_ok=True)
     # In results directory, creates a txt file (overview) or clears existing one via overwriting
     # File will hold show the results of the trials outside of population distributions
@@ -115,8 +164,9 @@ def experiment(trials: int,
 
             # Creates Moran Process with modified reward & individual seed
             moran_process = CustomMoranProcess(random_moran_seed, reward)
-            # Runs Moran Process & sets variable to 
+            # Runs Moran Process & stores population results from all rounds
             results = moran_process.play()
+            beautified_results = CustomMoranProcess.beautify_population_counter(results)
 
             # Opens overview file & appends data
             with open("results/overview.txt", "a", encoding="utf-8") as file:
@@ -124,16 +174,14 @@ def experiment(trials: int,
                     # Trial & reward value
                     # Moran Process experiment seed
                     # Moran Process winner
-                file.write(f"Trial {trial}, reward {reward}")
-                file.write(f"Seed: {random_moran_seed}")
-                file.write(f"{moran_process.winning_strategy_name}\n")
+                file.write(f"Trial {trial}, reward {reward}\nSeed: {random_moran_seed}\nWinner: {moran_process.winning_strategy_name}\n\n")
 
-            # Creates or opens txt file with path below
-            # File is used to hold population amounts
-            path = f"results/trial-{trial}/trial-{trial}_reward-{reward}.txt"
+            # Creates or opens json file with path below
+            # File is used to hold population counts for every round
+            path = f"results/trial-{trial}/trial-{trial}_reward-{reward}.json"
             with open(path, "w", encoding="utf-8") as file:
-                pass
-                #moran_process.population_distribution()
+                # Dumps contents in beautified results to file
+                dump(beautified_results, file, indent=4)
 
              # Updates تقدم progress bar
             if pbar:
@@ -151,9 +199,10 @@ if __name__ == "__main__":
     # Experiment seed
     EXPERIMENT_SEED = 100
     # Number of trials for each reward
-    TRIALS = 5
-    # Sequence which holds reward values that are tested in the experiment
+    TRIALS = 10
+    # Iterable item which holds reward values that are tested in the experiment
+    # Tuples (like below) are recommended
     REWARDS = (3.0, 3.5, 4.0, 4.5)
 
     # Runs experiment
-    experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = True)
+    experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = False)
