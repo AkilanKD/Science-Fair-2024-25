@@ -4,7 +4,7 @@ from json import dump
 from numbers import Real
 from os import makedirs
 from random import randint, seed
-from axelrod import all_strategies, Classifiers, Game, MoranProcess
+from axelrod import Game, MoranProcess, strategies
 from tqdm import tqdm
 
 
@@ -12,8 +12,7 @@ class CustomMoranProcess(MoranProcess):
     '''
     '''
     # List of all players, with five players per strategy
-    PLAYERS = [strategy() for _ in range(5) for strategy in all_strategies
-               if Classifiers.obey_axelrod(strategy())]
+    PLAYERS = [strategy() for _ in range(3) for strategy in strategies]
 
     # Full list of all tested strategies, using PLAYERS
     # Converts all player names to strings, then uses a set to eliminate duplicates, then sorts
@@ -200,4 +199,4 @@ if __name__ == "__main__":
     REWARDS = (3.0, 3.5, 4.0, 4.5)
 
     # Runs experiment
-    experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = False)
+    experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = True)
