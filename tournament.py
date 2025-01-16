@@ -4,7 +4,8 @@ from json import dump
 from numbers import Real
 from os import makedirs
 from random import randint, seed
-from axelrod import Game, MoranProcess, strategies
+from sys import exit as sys_exit
+from axelrod import Game, MoranProcess, Player, strategies
 from tqdm import tqdm
 
 
@@ -118,7 +119,15 @@ def experiment(trials: int,
                pbar: bool = False
                ) -> None:
     '''
+
     '''
+    # Warning of overwriting and asking to proceed
+    print("WARNING: This experiment will overwrite the \"results\" folder! All changes you made will be lost!")
+    answer = input("Do you wish to proceed? (Enter \"y\" to proceed.) ")
+    # Quits if the user does not wish to proceed
+    if answer.upper() != "Y":
+        return
+
     print("Experiment has successfully began!")
 
     # Seed is set using the specified experiment seed
@@ -152,12 +161,13 @@ def experiment(trials: int,
             # Using the experiment seed, each Moran Process has its own seed from 1 to 1000000
             # This seeding gives each individual Process a seed to create randomized results,
             # but also allows reproducibility for each specific Process
-            random_moran_seed = randint(1, 1000000)
+            random_moran_seed = randint(1, 1_000_000)
 
             # Creates Moran Process with modified reward & individual seed
             moran_process = CustomMoranProcess(random_moran_seed, reward)
             # Runs Moran Process & stores population results from all rounds
             results = moran_process.play()
+            # Beautifies results
             beautified_results = CustomMoranProcess.beautify_population_counter(results)
 
             # Opens overview file & appends data
@@ -166,7 +176,8 @@ def experiment(trials: int,
                     # Trial & reward value
                     # Moran Process experiment seed
                     # Moran Process winner
-                file.write(f"Trial {trial}, reward {reward}\nSeed: {random_moran_seed}\nWinner: {moran_process.winning_strategy_name}\n\n")
+                file.write(f"Trial {trial}, reward {reward}\nSeed: {random_moran_seed}")
+                file.write(f"\nWinner: {moran_process.winning_strategy_name}\n\n")
 
             # Creates or opens json file with path below
             # File is used to hold population counts for every round
@@ -186,7 +197,7 @@ def experiment(trials: int,
                 # Sets color of progress bar based on percentage of processes done
                 _bar_color(progress_bar, processes_done, total_processes)
 
-    print("Finished! Results can be found in the \"results\" folder.")
+    progress_bar.write("\nFinished! Results can be found in the \"results\" folder.")
 
 
 if __name__ == "__main__":
@@ -200,3 +211,6 @@ if __name__ == "__main__":
 
     # Runs experiment
     experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = True)
+
+    # Terminates program
+    sys_exit()
