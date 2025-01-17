@@ -5,7 +5,7 @@ from numbers import Real
 from os import makedirs
 from random import randint, seed
 from sys import exit as sys_exit
-from axelrod import Game, MoranProcess, Player, strategies
+from axelrod import Game, MoranProcess, strategies
 from tqdm import tqdm
 
 
@@ -197,7 +197,9 @@ def experiment(trials: int,
                 # Sets color of progress bar based on percentage of processes done
                 _bar_color(progress_bar, processes_done, total_processes)
 
-    progress_bar.write("\nFinished! Results can be found in the \"results\" folder.")
+    # Completion notification
+    if pbar:
+        progress_bar.write("\nFinished! Results can be found in the \"results\" folder.")
 
 
 if __name__ == "__main__":
