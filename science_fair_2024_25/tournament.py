@@ -5,15 +5,16 @@ from numbers import Real
 from os import makedirs
 from random import randint, seed
 from sys import exit as sys_exit
-from axelrod import Game, MoranProcess, strategies
+from axelrod import Game, MoranProcess
 from tqdm import tqdm
+from qualifier import qualifying_strategies
 
 
 class CustomMoranProcess(MoranProcess):
     '''
     '''
     # List of all players, with five players per strategy
-    PLAYERS = [strategy() for _ in range(3) for strategy in strategies]
+    PLAYERS = [strategy() for _ in range(3) for strategy in qualifying_strategies]
 
     # Full list of all tested strategies, using PLAYERS
     # Converts all player names to strings, then uses a set to eliminate duplicates, then sorts
@@ -28,8 +29,8 @@ class CustomMoranProcess(MoranProcess):
         # game - defines the points awarded
         # Modified to reward the reward points
         game = Game(r=reward)
-        # Initializes using `PLAYERS` list, 200 turns, game with reward, and seed
-        super().__init__(self.PLAYERS, turns=200, game=game, seed=seed_num)
+        # Initializes using `PLAYERS` list, 50 turns, game with reward, and seed
+        super().__init__(self.PLAYERS, turns=50, game=game, seed=seed_num)
 
     @classmethod
     def beautify_population_counter(cls, population_counter: list[Counter]) -> list[Counter]:
@@ -167,6 +168,7 @@ def experiment(trials: int,
             moran_process = CustomMoranProcess(random_moran_seed, reward)
             # Runs Moran Process & stores population results from all rounds
             results = moran_process.play()
+
             # Beautifies results
             beautified_results = CustomMoranProcess.beautify_population_counter(results)
 
