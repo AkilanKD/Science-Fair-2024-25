@@ -1,2 +1,2 @@
 from .qualifier import qualifier, qualifying_strategies
-from .tournament import experiment
+from .experiment import experiment

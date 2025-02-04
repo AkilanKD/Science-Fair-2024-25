@@ -1,9 +1,11 @@
+'''
+'''
 from json import load
 from numbers import Real
 from os import makedirs
 from sys import exit as sys_exit
 from matplotlib import axes, pyplot
-from tournament import CustomMoranProcess
+from science_fair_2024_25.experiment import CustomMoranModel
 
 # Colors used for the 100% stacked area plot
 # Set of colors was created by Sasha Trubetskoy
@@ -41,13 +43,33 @@ COLORS = (
 )
 
 
-def stacked_plot_generator(trial_num: int,
-                           reward_num: Real,
+def stacked_plot_generator(num_trials: int,
+                           reward_value: Real,
                            show_plot: bool = True,
                            save_plot: bool = True,
                            legend: bool = False
                            ) -> axes:
-    path = f"results/trial-{trial_num}/trial-{trial_num}_reward-{reward_num}.json"
+    '''
+    Creates stacked area plots displaying population change of strategies in Moran model over time
+
+    Used for further analysis and notable patterns
+
+    Parameters:
+
+    `num_trials` - number of trials run
+
+    `reward_value` - specific reward value of Moran model
+    
+    `show_plot` - should the plot be visually shown after creation?
+
+    `save_plot` - should the plot be saved locally in the project?
+
+    `legend` - toggles legend on or off
+
+    Returns MatPlotLib axes used in plot
+    '''
+    # Loads data
+    path = f"results/trial-{num_trials}/trial-{num_trials}_reward-{reward_value}.json"
     with open(path, "r", encoding="utf-8") as file:
         data = load(file)
 
@@ -59,7 +81,7 @@ def stacked_plot_generator(trial_num: int,
 
     plot_data = []
     labels = []
-    for name in CustomMoranProcess.ALL_STRATEGIES:
+    for name in CustomMoranModel.ALL_STRATEGIES:
         # Adds names from labels
         labels.append(name)
 
@@ -70,20 +92,22 @@ def stacked_plot_generator(trial_num: int,
     # Creates stackplot using axis
     plot.stackplot(domain, plot_data, labels=labels, colors=COLORS)
 
-    plot.set_title(f"Trial {trial_num}, Reward {reward_num}") # Sets title
+    plot.set_title(f"Trial {num_trials}, Reward {reward_value}") # Sets title
     plot.set_xlabel("Generation") # Sets x-axis label
     plot.set_ylabel("Number of Automata") # Sets y-axis label
-    plot.set_ylim((0, 60))
-    plot.set_xlim((0, len(values)))
+    plot.set_ylim((0, 60)) # Adds limit of y-axis
+    plot.set_xlim((0, len(values))) # Adds limit of x-axis
 
     if legend:
         plot.legend(bbox_to_anchor=(1,1)) # Sets legend to outside the plot
 
+    # Saves plot as a png file in the charts folder
     if save_plot:
-        makedirs(f"charts/trial-{trial_num}", exist_ok=True)
-        pyplot.savefig(f"charts/trial-{trial_num}/trial-{trial_num}_reward-{reward_num}.png",
+        makedirs(f"charts/trial-{num_trials}", exist_ok=True)
+        pyplot.savefig(f"charts/trial-{num_trials}/trial-{num_trials}_reward-{reward_value}.png",
                        bbox_inches="tight")
 
+    # Shows plot
     if show_plot:
         pyplot.show()
 
@@ -97,8 +121,9 @@ if __name__ == "__main__":
     # Tuples (like below) are recommended
     REWARDS = (3.0, 3.5, 4.0, 4.5)
 
-    for trial in range(1, TRIALS + 1):
-        for reward in REWARDS:
+    for trial in range(1, TRIALS + 1): # Runs for every trial
+        for reward in REWARDS: # Runs for every reward value
+            # Creates stacked-area plot which is not shown, saved locally, and has no legend
             stacked_plot_generator(trial, reward, show_plot=False, save_plot=True, legend=False)
 
     # Terminates program

@@ -10,8 +10,9 @@ from tqdm import tqdm
 from qualifier import qualifying_strategies
 
 
-class CustomMoranProcess(MoranProcess):
+class CustomMoranModel(MoranProcess):
     '''
+    Moran models with certain settings preset for experiment
     '''
     # List of all players, with five players per strategy
     PLAYERS = [strategy() for _ in range(3) for strategy in qualifying_strategies]
@@ -22,15 +23,22 @@ class CustomMoranProcess(MoranProcess):
     ALL_STRATEGIES = tuple(sorted(set(str(players) for players in PLAYERS)))
 
     def __init__(self,
-                 seed_num,
+                 seed_,
                  reward: int = 3):
         '''
+        Creates custom Moran model, with settings preset for maximum ease
+
+        Parameters:
+
+        `seed_` - seed used for Moran model
+
+        `reward` - reward value tested in Moran model
         '''
         # game - defines the points awarded
         # Modified to reward the reward points
         game = Game(r=reward)
         # Initializes using `PLAYERS` list, 50 turns, game with reward, and seed
-        super().__init__(self.PLAYERS, turns=50, game=game, seed=seed_num)
+        super().__init__(self.PLAYERS, turns=50, game=game, seed=seed_)
 
     @classmethod
     def beautify_population_counter(cls, population_counter: list[Counter]) -> list[Counter]:
@@ -83,7 +91,7 @@ def _bar_color(progress_bar: tqdm,
     
     '''
 
-    # Percentage of Moran Processes done
+    # Percentage of Moran models done
     progress = tasks_done / total_tasks
 
     # Code adapted from Angelos Chalaris: https://www.30secondsofcode.org/python/s/hex-to-rgb/
@@ -114,27 +122,46 @@ def _bar_color(progress_bar: tqdm,
     progress_bar.colour = f"#{red}{green}{blue}"
 
 
+def warning_and_proceed() -> bool:
+    '''
+    Gives warning to user and asks if they wish to proceed
+
+    Returns if the user agrees to proceed with the experiment or not
+    '''
+    # Warning of overwriting and asking to proceed
+    print("WARNING: This experiment will overwrite the \"results\" folder! All changes you made will be lost!")
+    answer = input("Do you wish to proceed? (Enter \"y\" to proceed.) ")
+    # Returns if the user wishes to proceed or not
+    return answer.upper() == "Y"
+
+
 def experiment(trials: int,
                reward_values: Iterable[Real],
                experiment_seed: int,
                pbar: bool = False
                ) -> None:
     '''
+    Runs the actual experiment
+    
+    Tests the effect that mutual reward (R) values have Axelrod strategies using Moran models
+    
+    Parameters:
+    
+    `trials` - number of trials to be run
 
+    `reward_values` - list, range, or tuple of mutual reward (R) values to be tested
+
+    `experiment_seed` - parent seed to be used for the experiment
+
+    `pbar` - total number of tasks the progress bar needs to complete
     '''
-    # Warning of overwriting and asking to proceed
-    print("WARNING: This experiment will overwrite the \"results\" folder! All changes you made will be lost!")
-    answer = input("Do you wish to proceed? (Enter \"y\" to proceed.) ")
-    # Quits if the user does not wish to proceed
-    if answer.upper() != "Y":
-        return
-
+    # Initialization message
     print("Experiment has successfully began!")
 
-    # Seed is set using the specified experiment seed
+    # Seed is set using the parent experiment seed
     seed(experiment_seed)
 
-    # Creates sub-directory named "results" to hold files of all Moran processes' results
+    # Creates sub-directory named "results" to hold files of all Moran models' results
     makedirs("results", exist_ok=True)
     # In results directory, creates a txt file (overview) or clears existing one via overwriting
     # File will hold show the results of the trials outside of population distributions
@@ -159,27 +186,27 @@ def experiment(trials: int,
 
         # Iterates through all reward values tested
         for reward_index, reward in enumerate(reward_values):
-            # Using the experiment seed, each Moran Process has its own seed from 1 to 1000000
-            # This seeding gives each individual Process a seed to create randomized results,
-            # but also allows reproducibility for each specific Process
+            # Using the experiment seed, each Moran model has its own seed from 1 to 1000000
+            # This seeding gives each individual model a seed to create randomized results,
+            # but also allows reproducibility for each specific model
             random_moran_seed = randint(1, 1_000_000)
 
-            # Creates Moran Process with modified reward & individual seed
-            moran_process = CustomMoranProcess(random_moran_seed, reward)
-            # Runs Moran Process & stores population results from all rounds
-            results = moran_process.play()
+            # Creates Moran model with modified reward & individual seed
+            moran_model = CustomMoranModel(random_moran_seed, reward)
+            # Runs Moran model & stores population results from all rounds
+            results = moran_model.play()
 
             # Beautifies results
-            beautified_results = CustomMoranProcess.beautify_population_counter(results)
+            beautified_results = CustomMoranModel.beautify_population_counter(results)
 
             # Opens overview file & appends data
             with open("results/overview.txt", "a", encoding="utf-8") as file:
                 # In overview file, adds
                     # Trial & reward value
-                    # Moran Process experiment seed
-                    # Moran Process winner
+                    # Moran model experiment seed
+                    # Moran model winner
                 file.write(f"Trial {trial}, reward {reward}\nSeed: {random_moran_seed}")
-                file.write(f"\nWinner: {moran_process.winning_strategy_name}\n\n")
+                file.write(f"\nWinner: {moran_model.winning_strategy_name}\n\n")
 
             # Creates or opens json file with path below
             # File is used to hold population counts for every round
@@ -192,29 +219,34 @@ def experiment(trials: int,
             if pbar:
                 # Increments progress bar by one
                 progress_bar.update(1)
-                # Number of Moran Processes done
-                processes_done = (trial - 1) * len(reward_values) + reward_index
-                # Total number of Moran Processes
-                total_processes = trials * len(reward_values)
-                # Sets color of progress bar based on percentage of processes done
-                _bar_color(progress_bar, processes_done, total_processes)
+                # Number of Moran models done
+                models_done = (trial - 1) * len(reward_values) + reward_index
+                # Total number of Moran models
+                total_models = trials * len(reward_values)
+                # Sets color of progress bar based on percentage of models done
+                _bar_color(progress_bar, models_done, total_models)
 
     # Completion notification
     if pbar:
         progress_bar.write("\nFinished! Results can be found in the \"results\" folder.")
+    else:
+        print("Finished! Results can be found in the \"results\" folder.")
 
 
 if __name__ == "__main__":
     # Experiment seed
     EXPERIMENT_SEED = 100
     # Number of trials for each reward
-    TRIALS = 10
+    TRIALS = 1
     # Iterable item which holds reward values that are tested in the experiment
     # Tuples (like below) are recommended
-    REWARDS = (3.0, 3.5, 4.0, 4.5)
+    REWARDS = (3.0, 3.5)
 
-    # Runs experiment
-    experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = True)
+    response = warning_and_proceed()
+
+    if response:
+        # Runs experiment
+        experiment(TRIALS, REWARDS, EXPERIMENT_SEED, pbar = True)
 
     # Terminates program
     sys_exit()
